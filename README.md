@@ -19,6 +19,8 @@ The SDK provides a simple node JS wrapper for the [LivePerson messaging API][1].
     - [MessagingEventNotification isMe()](#messagingeventnotification-isme)
     - [ExConversationChangeNotification getMyRole()](#exconversationchangenotification-getmyrole)
   - [Messaging Agent API (backend)](#messaging-agent-api-backend)
+    - [reconnect()](#reconnect)
+    - [dispose()](#dispose)
     - [registerRequests(arr)](#registerrequestsarr)
     - [request(type, body[, headers], callback)](#requesttype-body-headers-callback)
 - [Further documentation](#further-documentation)
@@ -158,6 +160,13 @@ setAgentState
 subscribeAgentsState
 ```
 
+#### reconnect() 
+Will reconnect the socket with the same configurations.  
+Use if when socket closed unexpectedly.
+
+#### dispose() 
+Will dispose of the connection and unregister internal events.  
+Use it in order to clean the agent from memory.
 
 #### registerRequests(arr)
 
