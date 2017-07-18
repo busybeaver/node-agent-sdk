@@ -6,6 +6,9 @@
  * 1) Echo any new message from the consumer
  * 2) Close the conversation if the consumer message starts with '#close'
  *
+ * Replying is done via webhooks, so this example exposes an /post API by
+ * starting a simple express.js server and then posting a request to this
+ * REST API.
  */
 
 const MyCoolAgent = require('../agent-bot/MyCoolAgent');
@@ -17,7 +20,7 @@ const app = express();
 const jsonParser = bodyParser.json();
 const req = request.defaults({
     'method': 'POST',
-    'url': 'http://127.0.0.1:8080/post', // TODO: set via env variable
+    'url': process.env.LP_API_ENDPOINT || 'http://127.0.0.1:8080/post',
     'json': true
 });
 
@@ -30,7 +33,7 @@ const echoAgent = new MyCoolAgent({
     csdsDomain: process.env.LP_CSDS
 });
 
-// an API to send messages to
+// an API to send messages to LP
 app.post('/post', jsonParser, (req, res) => {
     echoAgent.publishEvent(req.body);
     res.send(200);
