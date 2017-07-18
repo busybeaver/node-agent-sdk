@@ -59,7 +59,7 @@ class MyCoolAgent extends Agent {
                     // new conversation for me
                     openConvs[change.result.convId] = {};
 
-                    // demonstraiton of using the consumer profile calls
+                    // demonstration of using the consumer profile calls
                     const consumerId = change.result.conversationDetails.participants.filter(p => p.role === "CONSUMER")[0].id;
                     this.getUserProfile(consumerId, (e, profileResp) => {
                         this.publishEvent({
