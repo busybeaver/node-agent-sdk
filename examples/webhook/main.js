@@ -36,10 +36,10 @@ const echoAgent = new MyCoolAgent({
 // an API to send messages to LP
 app.post('/post', jsonParser, (req, res) => {
     echoAgent.publishEvent(req.body);
-    res.send(200);
+    res.sendStatus(200);
 });
 
-app.listen(8080, () => console.log('Example app listening on port 8080!'));
+app.listen(8080, () => console.log('Example Rest API listening on port 8080!'));
 
 echoAgent.on('MyCoolAgent.ContentEvent',(contentEvent)=>{
     if (contentEvent.message.startsWith('#close')) {
