@@ -12,18 +12,39 @@
  */
 
 const MyCoolAgent = require('../agent-bot/MyCoolAgent');
-const request = require('request');
 const express = require('express');
 const bodyParser = require('body-parser');
 
+const baseurl = process.env.LP_API_ENDPOINT || 'http://127.0.0.1:8080/logic'
+const logicUrl = baseurl + logicPath;
+
 const app = express();
 const jsonParser = bodyParser.json();
-const req = request.defaults({
-    'method': 'POST',
-    'url': process.env.LP_API_ENDPOINT || 'http://127.0.0.1:8080/post',
+const jsonReq = require('request').defaults({
     'json': true
 });
 
+
+// ************** Example webhook of logic
+// usually should be deployed on different server
+app.post('/logic', jsonParser, (req, res) => {
+    const contentEvent = req.body;
+    jsonReq.post({ 
+        url: `${baseurl}/api/publishEvent`, 
+        body: {
+            dialogId: contentEvent.dialogId,
+            event: {
+                type: 'ContentEvent',
+                contentType: 'text/plain',
+                message: `echo : ${contentEvent.message}`
+            }
+        }
+    });
+});
+// ************** End of webhook of logic
+
+
+// ************** Webhook bridge
 const echoAgent = new MyCoolAgent({
     accountId: process.env.LP_ACCOUNT,
     username: process.env.LP_USER,
@@ -33,34 +54,15 @@ const echoAgent = new MyCoolAgent({
     csdsDomain: process.env.LP_CSDS
 });
 
-// an API to send messages to LP
-app.post('/post', jsonParser, (req, res) => {
-    echoAgent.publishEvent(req.body);
-    res.sendStatus(200);
-});
-
-app.listen(8080, () => console.log('Example Rest API listening on port 8080!'));
-
+// forward events to the webhook logic
 echoAgent.on('MyCoolAgent.ContentEvent',(contentEvent)=>{
-    if (contentEvent.message.startsWith('#close')) {
-        echoAgent.updateConversationField({
-            conversationId: contentEvent.dialogId,
-            conversationField: [{
-                field: 'ConversationStateField',
-                conversationState: 'CLOSE'
-            }]
-        });
-
-    } else {
-        // send data to webhook endpoint
-        const body = {
-            dialogId: contentEvent.dialogId,
-            event: {
-                type: 'ContentEvent',
-                contentType: 'text/plain',
-                message: `echo : ${contentEvent.message}`
-            }
-        };
-        req({body});
-    }
+    jsonReq.post({ url: logicUrl, body: contentEvent})
 });
+
+// get async commands from the webhook logic
+app.post('/api/:method', jsonParser, (req, res) => {
+    echoAgent[req.params.method](req.body, (r,e)=> res.sendStatus(e?400:200));
+});
+// ************** End of Webhook bridge
+
+app.listen(8080, () => console.log('Example app listening on port 8080!'));
