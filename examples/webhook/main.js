@@ -6,13 +6,16 @@
  * 1) Echo any new message from the consumer
  * 2) Close the conversation if the consumer message starts with '#close'
  *
+ * Replying is done via webhooks, so this example exposes an /post API by
+ * starting a simple express.js server and then posting a request to this
+ * REST API.
  */
 
 const MyCoolAgent = require('../agent-bot/MyCoolAgent');
 const express = require('express');
 const bodyParser = require('body-parser');
-const baseurl = 'http://127.0.0.1:8080';
-const logicPath = '/logic';
+
+const baseurl = process.env.LP_API_ENDPOINT || 'http://127.0.0.1:8080/logic'
 const logicUrl = baseurl + logicPath;
 
 const app = express();
@@ -24,16 +27,16 @@ const jsonReq = require('request').defaults({
 
 // ************** Example webhook of logic
 // usually should be deployed on different server
-app.post(logicPath, jsonParser, (req, res) => {
-    const contentReq = req.body;
+app.post('/logic', jsonParser, (req, res) => {
+    const contentEvent = req.body;
     jsonReq.post({ 
         url: `${baseurl}/api/publishEvent`, 
         body: {
-            dialogId: contentReq.dialogId,
+            dialogId: contentEvent.dialogId,
             event: {
                 type: 'ContentEvent',
                 contentType: 'text/plain',
-                message: `echo : ${contentReq.message}`
+                message: `echo : ${contentEvent.message}`
             }
         }
     });
@@ -63,4 +66,3 @@ app.post('/api/:method', jsonParser, (req, res) => {
 // ************** End of Webhook bridge
 
 app.listen(8080, () => console.log('Example app listening on port 8080!'));
-
