@@ -1,6 +1,7 @@
 
 # node-agent-sdk
 
+[![build](https://travis-ci.org/LivePersonInc/node-agent-sdk.svg?branch=master)](https://travis-ci.org/LivePersonInc/node-agent-sdk)
 [![npm version](https://img.shields.io/npm/v/node-agent-sdk.svg)](https://img.shields.io/npm/v/node-agent-sdk)
 [![npm downloads](https://img.shields.io/npm/dm/node-agent-sdk.svg)](https://img.shields.io/npm/dm/node-agent-sdk.svg)
 [![license](https://img.shields.io/npm/l/node-agent-sdk.svg)](LICENSE)
@@ -12,14 +13,15 @@ The SDK provides a simple node JS wrapper for the [LivePerson messaging API][1].
 - [Disclaimer](#disclaimer)
 - [Getting Started](#getting-started)
 - [Example Usage](#example-usage)
+- [Example Sending Rich Content (Structured Content)](#example-sending-rich-content-structured-content)
 - [API Overview](#api-overview)
   - [Agent class](#agent-class)
   - [Events](#events)
   - [Specific notifications additions](#specific-notifications-additions)
-    - [MessagingEventNotification isMe()](#messagingeventnotification-isme)
-    - [ExConversationChangeNotification getMyRole()](#exconversationchangenotification-getmyrole)
+    - [MessagingEventNotification isMe() - deprecated](#messagingeventnotification-isme-deprecated)
+    - [ExConversationChangeNotification getMyRole() - deprecated](#exconversationchangenotification-getmyrole-deprecated)
   - [Messaging Agent API (backend)](#messaging-agent-api-backend)
-    - [reconnect()](#reconnect)
+    - [reconnect()](#reconnectskiptokengeneration)
     - [dispose()](#dispose)
     - [registerRequests(arr)](#registerrequestsarr)
     - [request(type, body[, headers], callback)](#requesttype-body-headers-callback)
@@ -40,7 +42,7 @@ The next version will require explicit registration.
    npm i node-agent-sdk --save
    ```
 
-- Run the [bot example][3] (see how in [Running The Sample App][4]).
+- Run the [greeting bot example][3] (see how in [Running The Sample App][4]).
 
 
 ### Example Usage
@@ -65,6 +67,135 @@ agent.on('connected', () => {
 });
 ```
 
+### Example Sending Rich Content (Structured Content)
+```javascript
+agent.publishEvent({
+    dialogId: 'MY_DIALOG_ID',
+    event: {
+        type: 'RichContentEvent',
+        content: {
+            "type": "vertical",
+            "elements": [
+                {
+                    "type": "image",
+                    "url": "http://cdn.mos.cms.futurecdn.net/vkrEdZXgwP2vFa6AEQLF7f-480-80.jpg?quality=98&strip=all",
+                    "tooltip": "image tooltip",
+                    "click": {
+                        "actions": [
+                            {
+                                "type": "navigate",
+                                "name": "Navigate to store via image",
+                                "lo": 23423423,
+                                "la": 2423423423
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": "product name (Title)",
+                    "tooltip": "text tooltip",
+                    "style": {
+                        "bold": true,
+                        "size": "large"
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": "product name (Title)",
+                    "tooltip": "text tooltip"
+                },
+                {
+                    "type": "button",
+                    "tooltip": "button tooltip",
+                    "title": "Add to cart",
+                    "click": {
+                        "actions": [
+                            {
+                                "type": "link",
+                                "name": "Add to cart",
+                                "uri": "http://www.google.com"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "horizontal",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "title": "Buy",
+                            "tooltip": "Buy this broduct",
+                            "click": {
+                                "actions": [
+                                    {
+                                        "type": "link",
+                                        "name": "Buy",
+                                        "uri": "http://www.google.com"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "button",
+                            "title": "Find similar",
+                            "tooltip": "store is the thing",
+                            "click": {
+                                "actions": [
+                                    {
+                                        "type": "link",
+                                        "name": "Buy",
+                                        "uri": "http://www.google.com"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "button",
+                    "tooltip": "button tooltip",
+                    "title": "Publish text",
+                    "click": {
+                        "metadata": [
+                            {
+                                "type": "ExternalId",
+                                "id": "MY_ACTION_ID"
+                            }
+                        ],
+                        "actions": [
+                            {
+                                "type": "publishText",
+                                "text": "my text"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "button",
+                    "tooltip": "button tooltip",
+                    "title": "Navigate",
+                    "click": {
+                        "actions": [
+                            {
+                                "type": "publishText",
+                                "text": "my text"
+                            },
+                            {
+                                "type": "navigate",
+                                "name": "Navigate to store via image",
+                                "lo": 23423423,
+                                "la": 2423423423
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}, null, [{type: 'ExternalId', id: 'MY_CARD_ID'}]);
+```
+
 
 ## API Overview
 
@@ -77,13 +208,23 @@ new Agent({
     username: String,
     password: String,
     token: String, // a bearer token instead of username and password
+    userId: String, // the user id - mandatory when using token as authentication method 
+    assertion: String, // a SAML assertion to be used instead of token or username and password
+    appKey: String,// oauth1 keys needed (with username) to be used instead of assertion or token or username and password
+    secret: String,
+    accessToken: String,
+    accessTokenSecret: String,
     csdsDomain: String, // override the CSDS domain if needed
     requestTimeout: Number, // default to 10000 milliseconds
     errorCheckInterval: Number, // defaults to 1000 milliseconds
     apiVersion: Number // Messaging API version - defaults to 2 (version 1 is not supported anymore)
 });
 ```
-
+### Authentication
+The Agent Messaging SDK support the following authentication methods:
+- username and password
+- Barear token as `token` with user id as `userId`
+- SAML assertion as `assertion`
 
 ### Events
 
@@ -116,7 +257,8 @@ agent.on('error', err => {
 ### Specific notifications additions
 Some notifications support helper methods to obtain the role and to identify if the message event is from "me".
 
-#### MessagingEventNotification isMe()
+#### MessagingEventNotification isMe() - deprecated
+This method is deprecated. please use `agent.agentId` instead  
 A method to understand on each change on the messaging event if it is from the agent connected right now or not. 
 ```javascript
 agent.on('ms.MessagingEventNotification', body => { 
@@ -126,7 +268,8 @@ agent.on('ms.MessagingEventNotification', body => {
 });
 ```
 
-#### ExConversationChangeNotification getMyRole()
+#### ExConversationChangeNotification getMyRole() - deprecated
+This method is deprecated. please use `agent.agentId` instead  
 A method to understand on each change on the conversation change notification conversation details the current agent role in the conversation or undefined if he is not participant.
 ```javascript
 agent.on('cqm.ExConversationChangeNotification', body => {
@@ -135,6 +278,9 @@ agent.on('cqm.ExConversationChangeNotification', body => {
     });
 });
 ```
+
+### Deprecation notice
+in the `cqm.ExConversationChangeNotification` the field `firstConversation` is deprecated
 
 ### Messaging Agent API (backend)
 
@@ -160,9 +306,10 @@ setAgentState
 subscribeAgentsState
 ```
 
-#### reconnect() 
-Will reconnect the socket with the same configurations.  
-Use if when socket closed unexpectedly.
+#### reconnect(skipTokenGeneration) 
+Will reconnect the socket with the same configurations - will also regenerate token by default.  
+Use if when socket closed unexpectedly or on token revocation.
+use `skipTokenGeneration = true` if you want to skip the token generation
 
 #### dispose() 
 Will dispose of the connection and unregister internal events.  
@@ -194,6 +341,32 @@ agent.request('.ams.aam.SubscribeExConversations', {
     });
 ```
 
+#### agentId
+
+You can get your agentId from the SDK using ``agent.agentId``.
+
+### Transfer sample script 
+
+The following code snippet will allow you to transfer an ongoing conversation to a different skill of agents 
+
+```javascript
+agent.updateConversationField({
+conversationId: "THE CONVERSATION ID",
+conversationField: [
+                        {
+                            field: "ParticipantsChange",
+                            type: "REMOVE",
+                            role: "ASSIGNED_AGENT"
+                        },
+                        {
+                            field: "Skill",
+                            type: "UPDATE",
+                            skill: "TARGET SKILL ID"
+                        }]
+}, function(err) {
+    if(err)....
+})
+```
 
 ### Further documentation
 
@@ -204,7 +377,7 @@ When creating a request through the request builder you should provide only the 
 
 ## Running The Sample App
 
-To run the [bot example][3]:
+To run the [greeting bot example][3]:
 
 - Provide the following `env` variables:
    - `LP_ACCOUNT` - Your LivePerson account ID
@@ -239,7 +412,7 @@ style. Add unit tests for any new or changed functionality, lint and test your c
    npm test
    ```
 
-- To run the [bot example][3], see [Running The Sample App][4].
+- To run the [greeting bot example][3], see [Running The Sample App][4].
 
 
 
@@ -247,5 +420,5 @@ style. Add unit tests for any new or changed functionality, lint and test your c
 
 [1]: https://livepersoninc.github.io/dev-hub/current/agent-int-api-reference.html
 [2]: https://github.com/LivePersonInc/agent-sample-app
-[3]: /examples/bot.js
+[3]: /examples/greeting-bot.js
 [4]: #running-the-sample-app

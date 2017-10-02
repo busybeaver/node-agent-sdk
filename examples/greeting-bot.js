@@ -9,42 +9,22 @@ const agent = new Agent({
     csdsDomain: process.env.LP_CSDS // 'hc1n.dev.lprnd.net'
 });
 
-let subscriptionId;
 let openConvs = {};
 
-agent.on('connected', msg => {
+agent.on('connected', () => {
     console.log('connected...');
-    agent.setAgentState({ availability: "OFFLINE"});
+    agent.setAgentState({ availability: 'AWAY' }); // Do not route me conversations, I'll join by myself.
     agent.subscribeExConversations({
-        'convState': ['OPEN']
-    }, (err, resp) => {
-        subscriptionId = resp.subscriptionId;
-        console.log('subscribed successfully', err, resp);
+        'convState': ['OPEN'] // subscribes to all open conversation in the account.
     });
 });
 
-agent.on('notification', msg => {
-    console.log('got message', msg);
-    if (msg.body.subscriptionId === subscriptionId) {
-        handleConversationNotification(msg.body, openConvs)
-    }
-});
-
-agent.on('error', err => {
-    console.log('got an error', err);
-});
-
-agent.on('closed', data => {
-    console.log('socket closed', data);
-    agent.reconnect();
-});
-
-function handleConversationNotification(notificationBody, openConvs) {
+agent.on('cqm.ExConversationChangeNotification', notificationBody => {
     notificationBody.changes.forEach(change => {
         if (change.type === 'UPSERT') {
             if (!openConvs[change.result.convId]) {
                 openConvs[change.result.convId] = change.result;
-                if (!change.result.conversationDetails.getMyRole()) {
+                if (!getParticipantInfo(change.result.conversationDetails, agent.agentId)) {
                     agent.updateConversationField({
                         'conversationId': change.result.convId,
                         'conversationField': [{
@@ -52,7 +32,7 @@ function handleConversationNotification(notificationBody, openConvs) {
                             'type': 'ADD',
                             'role': 'MANAGER'
                         }]
-                    }, (err, joinResp) => {
+                    }, () => {
                         agent.publishEvent({
                             dialogId: change.result.convId,
                             event: {
@@ -67,7 +47,20 @@ function handleConversationNotification(notificationBody, openConvs) {
         }
         else if (change.type === 'DELETE') {
             delete openConvs[change.result.convId];
-            console.log(`conversation was closed.\n`);
+            console.log('conversation was closed.\n');
         }
     });
+});
+
+agent.on('error', err => {
+    console.log('got an error', err);
+});
+
+agent.on('closed', data => {
+    console.log('socket closed', data);
+    agent.reconnect();//regenerate token for reasons of authorization (data === 4401 || data === 4407)
+});
+
+function getParticipantInfo(convDetails, participantId) {
+    return convDetails.participants.filter(p => p.id === participantId)[0];
 }
