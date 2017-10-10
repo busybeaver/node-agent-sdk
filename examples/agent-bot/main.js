@@ -13,20 +13,22 @@ const MyCoolAgent = require('./MyCoolAgent');
 const echoAgent = new MyCoolAgent({
     accountId: process.env.LP_ACCOUNT,
     username: process.env.LP_USER,
-    csdsDomain: process.env.LP_CSDS
-    appKey: process.env.LP_PASS,
-    secret: process.env.LP_PASS,
-    accessToken: process.env.LP_PASS,
-    accessTokenSecret: process.env.LP_PASS,
+    // For internal lp only use
+    //  export LP_CSDS=hc1n.dev.lprnd.net
+    csdsDomain: process.env.LP_CSDS,
+    appKey: process.env.LP_APP_KEY,
+    secret: process.env.LP_SECRET,
+    accessToken: process.env.LP_ACCESS_TOKEN,
+    accessTokenSecret: process.env.LP_ACCESS_TOKEN_SECRET,
 });
 
-echoAgent.on('MyCoolAgent.ContentEvnet',(contentEvent)=>{
+echoAgent.on('MyCoolAgent.ContentEvent', (contentEvent)=>{
     if (contentEvent.message.startsWith('#close')) {
         echoAgent.updateConversationField({
             conversationId: contentEvent.dialogId,
             conversationField: [{
-                    field: "ConversationStateField",
-                    conversationState: "CLOSE"
+                    field: 'ConversationStateField',
+                    conversationState: 'CLOSE'
                 }]
         });
     } else {

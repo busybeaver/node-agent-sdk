@@ -1,15 +1,15 @@
 'use strict';
 
 /*
- * This demo try to use most of the API calls of the mssaging agent api. It:
- * 
+ * This demo try to use most of the API calls of the messaging agent api. It:
+ *
  * 1) Registers the agent as online
  * 2) Accepts any routing task (== ring)
  * 3) Publishes to the conversation the consumer info when it gets new conversation
  * 4) Gets the content of the conversation
- * 5) Emit 'MyCoolAgent.ContentEvnet' to let the developer handle contentEvent responses
+ * 5) Emit 'MyCoolAgent.ContentEvent' to let the developer handle contentEvent responses
  * 6) Mark as "read" the handled messages
- * 
+ *
  */
 
 const Agent = require('./../../lib/AgentSDK');
@@ -20,7 +20,7 @@ class MyCoolAgent extends Agent {
         super(conf);
         this.conf = conf;
         this.init();
-        this.CONTENT_NOTIFICATION = 'MyCoolAgent.ContentEvnet';
+        this.CONTENT_NOTIFICATION = 'MyCoolAgent.ContentEvent';
     }
 
     init() {
@@ -58,8 +58,8 @@ class MyCoolAgent extends Agent {
                 if (change.type === 'UPSERT' && !openConvs[change.result.convId]) {
                     // new conversation for me
                     openConvs[change.result.convId] = {};
-                    
-                    // demonstraiton of using the consumer profile calls
+
+                    // demonstration of using the consumer profile calls
                     const consumerId = change.result.conversationDetails.participants.filter(p => p.role === "CONSUMER")[0].id;
                     this.getUserProfile(consumerId, (e, profileResp) => {
                         this.publishEvent({
